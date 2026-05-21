@@ -1,0 +1,165 @@
+import { Link, useNavigate } from "react-router-dom"
+import { useState } from "react"
+import axios from 'axios'
+import { toast, ToastContainer } from 'react-toastify'
+import GoogleButton from "../components/GoogleButton"
+import API from '../api/axios'
+
+const Register = () => {
+    const navigate = useNavigate()
+
+    const [inputValue, setInputValue] = useState({
+        name: "",
+        email: "",
+        password: ""
+    })
+
+    const { name, email, password } = inputValue
+
+    const nameCase = (_name) => {
+        if (!_name) return ""
+        return _name.toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+    }
+
+    const handleInput = (e) => {
+        const { name, value } = e.target
+        const updatedvalue = name === 'name' ? nameCase(value) : value
+        setInputValue({ ...inputValue, [name]: updatedvalue })
+    }
+
+    const handleError = (err) => {
+        toast.error(err, {
+            position: "bottom-right",
+        })
+    }
+
+    const handleSuccess = (msg) => {
+        toast.success(msg, {
+            position: "bottom-right"
+        })
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        try {
+            const response = await API.post('/auth/register', inputValue)
+
+            if (response.data && response.data.token) {
+                localStorage.setItem('token', response.data.token)
+
+                const userData = {
+                    _id: response.data._id,
+                    name: response.data.name,
+                    email: response.data.email
+                }
+                localStorage.setItem('user', JSON.stringify(userData))
+                
+                handleSuccess("Registration Successful!")
+
+                setTimeout(() => {
+                    window.location.href = '/'
+                }, 1000);
+            }
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || "Something went wrong"
+            handleError(errorMsg)
+            console.error("Auth Error:", err.response?.data)
+        }
+    }
+
+    return (
+        <div className="flex min-h-screen w-full items-center justify-center bg-[#F9FBFA] p-4">
+
+            <div className="flex w-full max-w-6xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+
+                <div className="w-full p-10 md:w-1/2 lg:p-16">
+                    <div className="mb-8">
+                        <h2 className="text-3xl font-bold text-[#001E2B]">Register here!</h2>
+                        <p className="text-gray-500">Join our developer community today.</p>
+                    </div>
+
+                    <form className="flex flex-col gap-5"
+                        onSubmit={handleSubmit}>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-[#001E2B]">Name</label>
+                            <input
+                                type="text"
+                                placeholder="John Doe"
+                                className="rounded border border-gray-300 p-3 outline-none transition focus:border-[#00ED64] focus:ring-1 focus:ring-[#00ED64]"
+                                required
+                                name="name"
+                                value={inputValue.name}
+                                onChange={handleInput}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-[#001E2B]">Email</label>
+                            <input
+                                type="email"
+                                placeholder="name@company.com"
+                                className="rounded border border-gray-300 p-3 outline-none transition focus:border-[#00ED64] focus:ring-1 focus:ring-[#00ED64]"
+                                required
+                                name="email"
+                                value={inputValue.email}
+                                onChange={handleInput}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-semibold text-[#001E2B]">Password</label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                className="rounded border border-gray-300 p-3 outline-none transition focus:border-[#00ED64] focus:ring-1 focus:ring-[#00ED64]"
+                                required
+                                name="password"
+                                value={inputValue.password}
+                                onChange={handleInput}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="mt-4 rounded bg-[#00ED64] py-3 font-bold text-[#001E2B] transition hover:bg-[#00c853]"
+                        >
+                            Create Account
+                        </button>
+                    </form>
+
+                    <p className="mt-6 text-center text-sm text-gray-600">
+                        Already have an account? <Link to='/'><span className="cursor-pointer text-[#00684A] font-semibold hover:underline">Log in</span></Link>
+                    </p>
+
+                    <div className="flex items-center my-6">
+                        <div className="flex grow h-px bg-gray-300"></div>
+                        <span className="mx-4 text-gray-500 text-sm">OR</span>
+                        <div className="flex grow h-px bg-gray-300"></div>
+                    </div>
+
+                    <GoogleButton />
+                </div>
+
+
+                <div className="hidden w-1/2 flex-col items-center justify-center bg-[#001E2B] p-12 text-white md:flex">
+                    <div className="max-w-sm text-center">
+                        <div className="mb-6 inline-block rounded-full bg-[#00ED64] p-4">
+                            <div className="h-8 w-8 bg-[#001E2B]" style={{ clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}></div>
+                        </div>
+                        <h3 className="mb-4 text-4xl font-bold">Build Faster.</h3>
+                        <p className="text-lg text-gray-300">
+                            Experience the power of a document-based workflow with our integrated suite.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+            <ToastContainer />
+        </div>
+    )
+}
+
+export default Register

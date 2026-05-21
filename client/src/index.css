@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* STOP THE DOUBLE DISPLAY & ALIGN Y-AXIS */
+.syncnode-mentions {
+  position: relative;
+}
+
+.syncnode-mentions [class$="__control"],
+.syncnode-mentions textarea,
+.syncnode-mentions [class$="__highlighter"] {
+  padding: 14px !important; /* Balanced padding centers the text/placeholder */
+  line-height: 1.5 !important;
+  min-height: 48px !important;
+  font-size: 13px !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.syncnode-mentions textarea {
+  position: relative;
+  z-index: 2;
+  background: transparent !important;
+  resize: none !important;
+  color: #001E2B !important;
+  padding-right: 50px !important;
+}
+
+.syncnode-mentions textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Ensure the highlighter matches the textarea position exactly and only renders mention styling */
+.syncnode-mentions [class$="__highlighter"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+  color: transparent !important;
+  background: transparent !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+.syncnode-mentions [class$="__highlighter"] {
+  display: none !important;
+}
+
+.syncnode-mentions [class$="__highlighter"] span,
+.syncnode-mentions [class$="__highlighter"] .mentions__mention {
+  color: #001E2B !important;
+}
+
+/* The @ mention dropdown list */
+.syncnode-mentions__suggestions {
+  background-color: white !important;
+  border: 1px solid #f3f4f6 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 16px !important;
+  padding: 8px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  z-index: 50 !important;
+}
+
+.syncnode-mentions__suggestions__item--focused {
+  background-color: #F0FDF4 !important;
+  color: #166534 !important;
+  border-radius: 10px !important;
+}
