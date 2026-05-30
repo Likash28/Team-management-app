@@ -29,7 +29,7 @@ const Navbar = () => {
   const openPendingModal = () => window.dispatchEvent(new CustomEvent('openPendingRequests'))
 
   return (
-    <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 relative z-[60]">
+    <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 relative z-60">
       <div className="flex items-center gap-4">
         {!isHomePage && <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"><ChevronLeft size={20} /></button>}
         <div className="text-gray-400 font-medium capitalize">{location.pathname.replace('/', ' ').replace('/', ' / ')}</div>
@@ -43,7 +43,7 @@ const Navbar = () => {
           </button>
 
           {/* D365 Style Dropdown */}
-          <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-[32px] shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-5">
+          <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-4xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all p-5">
             <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest px-1">Notifications</h4>
             {hasPending ? (
               <div onClick={openPendingModal} className="p-4 hover:bg-orange-50 rounded-2xl cursor-pointer transition-colors border border-transparent hover:border-orange-100">

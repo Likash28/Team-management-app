@@ -7,10 +7,13 @@ import {
   Table as TableIcon,
   Filter,
   X,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Trash2 // Added for a clean archive button view
 } from 'lucide-react'
 import API from '../api/axios'
 import { toast } from 'react-toastify'
+import ArchiveModal from '../components/ArchiveModal'
+import axios from 'axios'
 
 const Workspace = () => {
   const navigate = useNavigate()
@@ -23,8 +26,8 @@ const Workspace = () => {
   const [activeFilters, setActiveFilters] = useState({})
   const [members, setMembers] = useState([])
   const [pendingMembers, setPendingMembers] = useState([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
+  const [isAdminUser, setIsAdminUser] = useState(false)
 
   const [taskTitle, setTaskTitle] = useState("")
   const [taskDesc, setTaskDesc] = useState("")
@@ -33,9 +36,9 @@ const Workspace = () => {
   const [suggestions, setSuggestions] = useState([])
   const [hoveredUser, setHoveredUser] = useState(null)
 
-  const currentUser = JSON.parse(localStorage.getItem('user'))
-  const myMembership = members.find(m => m.user?._id === currentUser?._id)
-  const isAdmin = myMembership?.role === 'admin' || myMembership?.role === 'owner'
+  // Combined and deduplicated your modal state declarations
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [activeItem, setActiveItem] = useState(null)
 
   const fetchWorkspaceData = useCallback(async (filters = {}) => {
     try {
@@ -54,8 +57,14 @@ const Workspace = () => {
       setTasks(taskRes.data)
 
       const allMembers = memberRes.data
-      setMembers(allMembers.filter(m => m.status === 'active' || !m.status))
+      const activeMemberList = allMembers.filter(m => m.status === 'active' || !m.status)
+      setMembers(activeMemberList)
       setPendingMembers(allMembers.filter(m => m.status === 'pending'))
+
+      // Dynamic rule calculation to see if current user is an authorized Admin/Owner
+      const currentUser = JSON.parse(localStorage.getItem('user'))
+      const myMembership = activeMemberList.find(m => m.user?._id === currentUser?._id)
+      setIsAdminUser(myMembership?.role === 'admin' || myMembership?.role === 'owner')
 
     } catch (err) {
       toast.error("Error syncing tasks")
@@ -71,6 +80,42 @@ const Workspace = () => {
     window.addEventListener('openPendingRequests', handleOpenPending)
     return () => window.removeEventListener('openPendingRequests', handleOpenPending)
   }, [workspaceId, fetchWorkspaceData])
+
+  const handleArchiveClick = (e, id, name, type) => {
+    e.stopPropagation()
+    setActiveItem({ id, name, type })
+    setIsArchiveModalOpen(true)
+  }
+
+  const handleConfirmArchive = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const headers = { Authorization: `Bearer ${token}` }
+
+      if (activeItem.type === 'task') {
+        await axios.patch(`http://localhost:4000/api/tasks/${workspaceId}/${activeItem.id}/archive`,
+          { action: 'archive' },
+          { headers }
+        )
+
+        setTasks(prevTasks => prevTasks.filter(task => task._id !== activeItem.id))
+        toast.success("Task moved to archive bin")
+
+        fetchWorkspaceData(activeFilters)
+      } else {
+        await axios.patch(`http://localhost:4000/api/workspaces/${activeItem.id}/archive`,
+          { action: 'archive' },
+          { headers }
+        )
+        toast.success("Workspace archived successfully")
+        navigate('/workspaces')
+      }
+
+      setIsArchiveModalOpen(false)
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Archiving operation failed")
+    }
+  }
 
   const handleStatusUpdate = async (memberId, action) => {
     try {
@@ -97,16 +142,27 @@ const Workspace = () => {
     <div className="space-y-8 pb-20">
       <div className='flex justify-between items-end'>
         <div>
-          <h1 className="text-3xl font-bold text-[#001E2B]">Welcome to {workspaceName}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-[#001E2B]">Welcome to {workspaceName}</h1>
+            {isAdminUser && (
+              <button
+                onClick={(e) => handleArchiveClick(e, workspaceId, workspaceName, 'workspace')}
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                title="Archive Workspace"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+          </div>
           <p className="text-gray-400 mt-1 text-xs font-medium">Workspace ID: {workspaceId}</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 bg-[#00ED64] text-[#001E2B] font-bold px-6 py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95">
+        <button className="flex items-center gap-2 bg-[#00ED64] text-[#001E2B] font-bold px-6 py-3 rounded-2xl hover:shadow-lg transition-all active:scale-95">
           <Plus size={20} />
           <span>New Task</span>
         </button>
       </div>
 
-      {/* Pending Requests Modal (Overlay) */}
+      {/* Pending Requests Modal Container */}
       {isPendingModalOpen && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-[#001E2B]/40 backdrop-blur-md" onClick={() => setIsPendingModalOpen(false)}></div>
@@ -135,7 +191,7 @@ const Workspace = () => {
         </div>
       )}
 
-      {/* Control Bar with Phase Filters Restored */}
+      {/* Control Bar Filters Panel */}
       <div className="flex flex-col xl:flex-row gap-4 justify-between items-center bg-white p-4 rounded-3xl border border-gray-100 shadow-sm">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-gray-400 px-2 border-r border-gray-100 mr-1">
@@ -143,7 +199,6 @@ const Workspace = () => {
             <span className="text-[10px] font-black uppercase">Filters</span>
           </div>
 
-          {/* Assignee Filter */}
           <select
             value={activeFilters.primaryAssignee || ''}
             onChange={(e) => handleFilterChange({ primaryAssignee: e.target.value })}
@@ -153,7 +208,6 @@ const Workspace = () => {
             {members.map(m => <option key={m._id} value={m.user?._id}>{m.user?.name}</option>)}
           </select>
 
-          {/* Development & Status Filters Restored */}
           {[
             { label: 'Dev', key: 'devStatus' },
             { label: 'Unit Test', key: 'unitTestStatus' },
@@ -196,41 +250,66 @@ const Workspace = () => {
 
       {viewType === 'list' ? (
         <div className="bg-white rounded-4xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-green-100 text-[11px] text-gray-700 uppercase font-black tracking-widest border-b border-gray-50">
-              <tr>
-                <th className="px-8 py-5">ID</th>
-                <th className="px-6 py-5">Task Title</th>
-                <th className="px-6 py-5">Assignee</th>
-                <th className="px-6 py-5">Development</th>
-                <th className="px-6 py-5">Unit Test</th>
-                <th className="px-6 py-5">SIT</th>
-                <th className="px-6 py-5">UAT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {tasks.map(task => (
-                <tr key={task._id} onClick={() => navigate(`/workspace/${workspaceId}/task/${task._id}`)} className="hover:bg-gray-100 cursor-pointer transition-colors group">
-                  <td className="px-8 py-5 text-[12px] text-gray-500">#{task.numericId || 'N/A'}</td>
-                  <td className="px-6 py-5 group-hover:text-[#00684A] font-bold">{task.title}</td>
-                  <td className="px-6 py-5 text-[15px] tracking-tighter">{task.primaryAssignee?.name}</td>
-                  <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.devStatus} /></td>
-                  <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.unitTestStatus} /></td>
-                  <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.sitStatus} /></td>
-                  <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.uatStatus} /></td>
+          {tasks.length > 0 ? (
+            <table className="w-full text-left">
+              <thead className="bg-green-100 text-[11px] text-gray-700 uppercase font-black tracking-widest border-b border-gray-50">
+                <tr>
+                  <th className="px-8 py-5">ID</th>
+                  <th className="px-6 py-5">Task Title</th>
+                  <th className="px-6 py-5">Assignee</th>
+                  <th className="px-6 py-5">Development</th>
+                  <th className="px-6 py-5">Unit Test</th>
+                  <th className="px-6 py-5">SIT</th>
+                  <th className="px-6 py-5">UAT</th>
+                  {isAdminUser && <th className="px-6 py-5 text-center">Actions</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {tasks.map(task => (
+                  <tr key={task._id} onClick={() => navigate(`/workspace/${workspaceId}/task/${task._id}`)} className="hover:bg-gray-100 cursor-pointer transition-colors group">
+                    <td className="px-8 py-5 text-[12px] text-gray-500">#{task.numericId || 'N/A'}</td>
+                    <td className="px-6 py-5 group-hover:text-[#00684A]">{task.title}</td>
+                    <td className="px-6 py-5 text-[15px] tracking-tighter">{task.primaryAssignee?.name}</td>
+                    <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.devStatus} /></td>
+                    <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.unitTestStatus} /></td>
+                    <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.sitStatus} /></td>
+                    <td className="px-6 py-5 text-[12px]"><StatusBadge status={task.uatStatus} /></td>
+                    {isAdminUser && (
+                      <td className="px-6 py-5 text-center">
+                        <button
+                          onClick={(e) => handleArchiveClick(e, task._id, task.title, 'task')}
+                          className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-200/50 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>) :
+            (<div className="text-center py-16 px-4">
+              <p className="text-gray-400 font-medium mb-1">Your workspace is empty!</p>
+              <p className="text-s text-gray-400">Create your first task and track the progress.</p>
+            </div>)}
         </div>
       ) : (
-        /* ... Grid View Logic ... */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tasks.map(task => (
-            <div key={task._id} onClick={() => navigate(`/workspace/${workspaceId}/task/${task._id}`)} className="bg-white p-6 rounded-4xl border border-gray-100 shadow-sm hover:border-[#00ED64] transition-all cursor-pointer group">
+            <div key={task._id} onClick={() => navigate(`/workspace/${workspaceId}/task/${task._id}`)} className="bg-white p-6 rounded-4xl border border-gray-100 shadow-sm hover:border-[#00ED64] transition-all cursor-pointer group relative">
               <div className="flex justify-between items-start mb-4">
                 <div className="bg-[#F0FDF4] p-3 rounded-2xl text-[#00684A]"><ListTodo size={20} /></div>
-                <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{task.priority}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{task.priority}</span>
+                  {isAdminUser && (
+                    <button
+                      onClick={(e) => handleArchiveClick(e, task._id, task.title, 'task')}
+                      className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
               <h3 className="font-bold text-[#001E2B] mb-1 group-hover:text-[#00684A]">{task.title}</h3>
               <p className="text-xs text-gray-400 line-clamp-2">{task.description}</p>
@@ -238,6 +317,16 @@ const Workspace = () => {
           ))}
         </div>
       )}
+
+      {/* Rendered your customized backdrop blur layout confirmation modal here */}
+      <ArchiveModal
+        isOpen={isArchiveModalOpen}
+        onClose={() => setIsArchiveModalOpen(false)}
+        onConfirm={handleConfirmArchive}
+        itemName={activeItem?.name || ""}
+        itemType={activeItem?.type || "task"}
+      />
+
     </div>
   )
 }

@@ -1,5 +1,7 @@
 const Workspace = require('../models/workspaceModel');
 const Member = require('../models/memberModel')
+const Task = require('../models/taskModel')
+const Archive = require('../models/archiveModel')
 const { nanoid } = require('nanoid')
 
 const createWorkspace = async (req, res) => {
@@ -91,29 +93,50 @@ const getUserWorkspaces = async (req, res) => {
     try {
         const memberships = await Member.find({
             user: req.user._id,
-            //status: 'active'
             status: { $in: ['active', null, undefined] }
-        }).populate({ path: 'workspace', model: 'Workspace' })
+        }).populate({
+            path: 'workspace',
+            model: 'Workspace',
+            match: { isArchived: { $ne: true } }
+        })
 
-        const allWorkspaceIds = memberships.map(m => m.workspace._id)
+        const activeMemberships = memberships.filter(m => m.workspace && m.workspace._id)
+
+        const allWorkspaceIds = activeMemberships.map(m => m.workspace._id)
         const uniqueMembers = await Member.distinct('user', {
             workspace: { $in: allWorkspaceIds }
         })
 
-        const memberCount = await Promise.all(memberships.map(async (m) => {
-            const workspace = m.workspace.toObject()
+        const workspaceStats = await Promise.all(activeMemberships.map(async (m) => {
+            const workspace = typeof m.workspace.toObject() === 'function' ? m.workspace.toObject() : m.workspace
 
+            // Count active members
             const totalCount = await Member.countDocuments({ workspace: workspace._id })
 
-            return { ...workspace, totalCount: totalCount }
+            // 3. FIXED: Count active tasks so Home.jsx can display the correct "Total Tasks" number!
+            const taskCount = await Task.countDocuments({
+                workspace: m.workspace._id,
+                isArchived: { $ne: true }
+            })
+
+            // Return both counts to the frontend
+            return {
+                _id: m.workspace._id,
+                name: m.workspace.name,
+                inviteCode: m.workspace.inviteCode,
+                isArchived: m.workspace.isArchived,
+                totalCount: totalCount,
+                taskCount: taskCount
+            }
         }))
 
         res.status(200).json({
-            workspaces: memberCount,
+            workspaces: workspaceStats,
             totalUniqueCollaborators: uniqueMembers.length
         })
     }
     catch (err) {
+        console.log('Dashboard Fetch error: ', err)
         res.status(500).json({ message: err.message })
     }
 }
@@ -224,7 +247,7 @@ const updateMemberStatus = async (req, res) => {
             return res.status(200).json({ message: "Request rejected" })
         }
 
-                const updatedMember = await Member.findByIdAndUpdate(
+        const updatedMember = await Member.findByIdAndUpdate(
             memberId,
             { status: 'active' },
             { new: true }
@@ -233,6 +256,74 @@ const updateMemberStatus = async (req, res) => {
         res.status(200).json(updatedMember)
     }
     catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+}
+
+const workspaceArchived = async (req, res) => {
+    try {
+        const { workspaceId } = req.params
+        const { action } = req.body
+
+        const requestor = await Member.findOne({ workspace: workspaceId, user: req.user._id })
+        if (!requestor || (requestor.role !== 'admin' && requestor.role !== 'owner')) {
+            return res.status(403).json({ message: "Only admins can archive a workspace" })
+        }
+
+        if (action === 'archive') {
+            const archived = await Workspace.findByIdAndUpdate(
+                workspaceId,
+                { isArchived: true, wasRestored: false },
+                { new: true }
+            )
+
+            if (!archived) {
+                return res.status(404).json({ message: "Workspace not found" })
+            }
+
+            await Task.updateMany(
+                { workspace: workspaceId },
+                { isArchived: true }
+            )
+
+            const existing = await Archive.findOne({ workspace: workspaceId })
+
+            if (!existing) {
+                await Archive.create({
+                    itemType: 'workspace',
+                    workspace: workspaceId,
+                    archivedBy: req.user._id
+                })
+            } else {
+                return res.status(400).json({ message: 'Workspace already archived' })
+            }
+
+            return res.status(200).json({ message: 'Task archived successfully', workspace: archived })
+        }
+
+        if (action === 'restore') {
+            await Workspace.findByIdAndUpdate(workspaceId, { isArchived: false, wasRestored: true })
+            const individualTasksArchived = await Archive.find({ itemType: 'task' })
+            const individuallyArchivedTasksId = individualTasksArchived.map(a => a.task)
+
+            await Task.updateMany(
+                {
+                    workspace: workspaceId,
+                    _id: { $nin: individuallyArchivedTasksId }
+                },
+                { isArchived: false, wasRestored: true }
+            )
+
+            await Archive.deleteOne({workspace: workspaceId})
+
+            return res.status(200).json({ message: "Workspace restored successfully" })
+        }
+
+        return res.status(400).json({ message: "Invalid action provider" })
+
+    }
+    catch (err) {
+        console.error("Archive Error:", err)
         res.status(500).json({ message: err.message })
     }
 }
@@ -247,5 +338,6 @@ module.exports = {
     updateWorkspace,
     searchWorkspaceMembers,
     getInviteInfo,
-    updateMemberStatus
+    updateMemberStatus,
+    workspaceArchived
 }

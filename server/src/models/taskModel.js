@@ -68,7 +68,15 @@ const taskSchema = new mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'User',
 		required: true
-	}
+	},
+	isArchived: {
+  type: Boolean,
+  default: false
+},
+wasRestored: {
+  type: Boolean,
+  default: false
+}
 
 }, { timestamps: true })
 

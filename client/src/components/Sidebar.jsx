@@ -1,6 +1,6 @@
-import { LayoutDashboard, FolderKanban, Users, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Users, Settings, LogOut, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, NavLink } from 'react-router-dom'
 import API from '../api/axios'
 import { toast } from 'react-toastify'
 
@@ -52,8 +52,22 @@ const Sidebar = () => {
           </Link>
         ))}
 
+        {/* FIXED: Shifted inside the wrapping div wrapper block and optimized for your dark theme palette */}
+        <NavLink
+          to={`/archive-bin`}
+          className={({ isActive }) =>
+            `flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
+              ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/20'
+              : 'text-gray-400 hover:bg-white/5 hover:text-amber-400'
+            }`
+          }
+        >
+          <Trash2 size={20} />
+          <span>Archive Bin</span>
+        </NavLink>
+
         {workspaceId && (
-          <div className="pt-4 border-t border-white/5 mt-4">
+          <div className="pt-4 border-t border-white/5 mt-4 space-y-2">
             <button onClick={() => setIsMembersOpen(!isMembersOpen)} className="w-full flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-white/5 rounded-xl transition-all">
               <div className="flex items-center gap-4"><Users size={20} /> <span className="font-medium text-sm">Members</span></div>
               {isMembersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -72,7 +86,7 @@ const Sidebar = () => {
 
             {/* Sidebar Notification Item */}
             {isAdmin && (
-              <button onClick={openPendingModal} className="w-full flex items-center justify-between px-4 py-3 mt-2 text-gray-400 hover:bg-white/5 hover:text-[#00ED64] rounded-xl transition-all">
+              <button onClick={openPendingModal} className="w-full flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-white/5 hover:text-[#00ED64] rounded-xl transition-all">
                 <div className="flex items-center gap-4">
                   <Users size={20} className="text-orange-400" />
                   <span className="font-medium text-sm">Access Requests</span>
@@ -90,4 +104,5 @@ const Sidebar = () => {
     </div>
   )
 }
+
 export default Sidebar

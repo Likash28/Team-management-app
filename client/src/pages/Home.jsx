@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from 'react-toastify'
 import API from '../api/axios';
 
 const Home = () => {
@@ -101,18 +101,18 @@ const Home = () => {
       </div>
 
       {/* Stats derived from Real Data */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-          <p className="text-gray-400 text-sm font-semibold uppercase tracking-wider">Total Tasks</p>
-          <h3 className="text-3xl font-bold mt-2">{totalTasks}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-7">
+        <div>
+          <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">Total Tasks</p>
+          <h3 className="text-xl font-bold mt-2">{totalTasks}</h3>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-          <p className="text-gray-400 text-sm font-semibold uppercase tracking-wider">Workspaces</p>
-          <h3 className="text-3xl font-bold mt-2">{workspaces.length}</h3>
+        <div>
+          <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">Workspaces</p>
+          <h3 className="text-xl font-bold mt-2">{workspaces.length}</h3>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-          <p className="text-gray-400 text-sm font-semibold uppercase tracking-wider">Total Collaborators</p>
-          <h3 className="text-3xl font-bold mt-2">{totalCollaborators}</h3>
+        <div>
+          <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">Total Collaborators</p>
+          <h3 className="text-xl font-bold mt-2">{totalCollaborators}</h3>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ const Home = () => {
             >
               <div className="flex justify-between items-start mb-6">
                 <div className="w-12 h-12 bg-[#F0FDF4] rounded-2xl flex items-center justify-center text-[#00684A] font-bold text-xl">
-                  {ws.name.charAt(0)}
+                  {ws?.name?.charAt(0) || 'W'}
                 </div>
 
                 {/* 3-Dot Dropdown Menu */}
@@ -228,6 +228,7 @@ const Home = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

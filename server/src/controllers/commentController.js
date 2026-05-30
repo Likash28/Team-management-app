@@ -20,17 +20,26 @@ const addComment = async (req, res) => {
 
     if (mentions && mentions.length > 0) {
       const usersToNotify = await User.find({ _id: { $in: mentions } });
-      
-      usersToNotify.forEach(user => {
+
+      const emailPromises = usersToNotify.map(user => {
         if (user._id.toString() !== req.user._id.toString()) {
-          sendMentionEmail(user.email, req.user.name, taskId, task.title);
+          // return the promise so we can await them all and handle errors per-user
+          return sendMentionEmail(user.email, req.user.name, task.workspace, taskId, task.title)
+            .catch(err => {
+              console.error(`Failed to send mention email to ${user.email}:`, err);
+              // swallow here so one failure doesn't reject the whole Promise.all
+            });
         }
+        return Promise.resolve();
       });
+
+      await Promise.all(emailPromises);
     }
 
     const populatedComment = await comment.populate('user', 'name');
     res.status(201).json(populatedComment);
   } catch (err) {
+    console.error('addComment error:', err);
     res.status(500).json({ message: err.message });
   }
 };

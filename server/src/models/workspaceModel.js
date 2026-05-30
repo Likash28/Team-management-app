@@ -15,6 +15,14 @@ const workspaceSchema = new mongoose.Schema({
     inviteCode: {
         type: String,
         unique: true
+    },
+    isArchived: {
+        type: Boolean,
+        default: false
+    },
+    wasRestored: {
+        type: Boolean,
+        default: false
     }
 },
     {

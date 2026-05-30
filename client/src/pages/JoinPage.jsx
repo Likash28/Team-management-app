@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import API from '../api/axios'
-import { toast } from 'react-toastify'
+import {  toast } from 'react-toastify'
 
 const JoinPage = () => {
   const { inviteCode } = useParams()
@@ -73,6 +73,7 @@ const JoinPage = () => {
           Nevermind, take me home
         </button>
       </div>
+
     </div>
   )
 }

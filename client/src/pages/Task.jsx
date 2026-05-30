@@ -126,9 +126,11 @@ const Task = () => {
         <span>Back to Workspace</span>
       </button>
 
-      <div className="bg-white rounded-4xl shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row min-h-[80vh]">
+      {/* MODIFIED: Changed min-h-[80vh] to a fixed h-[85vh] to trap the flexbox grid */}
+      <div className="bg-white rounded-4xl shadow-xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row h-[85vh]">
 
-        <div className="flex-[2.5] border-r border-gray-50">
+        {/* MODIFIED: Added overflow-y-auto and custom-scrollbar so the left panel scrolls independently */}
+        <div className="flex-[2.5] border-r border-gray-50 overflow-y-auto custom-scrollbar">
           <div className="p-8 bg-gray-50/50 border-b border-gray-50">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3 text-gray-400 text-xs font-bold uppercase">
@@ -243,20 +245,25 @@ const Task = () => {
           </div>
         </div>
 
-        <div className="flex-1 bg-gray-50/20 p-8 flex flex-col">
-          <div className="flex-1">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+        {/* MODIFIED: Added overflow-hidden to trap the comment scroll in the right column */}
+        <div className="flex-1 bg-gray-50/20 p-8 flex flex-col overflow-hidden">
+          
+          {/* MODIFIED: Added flex-1 flex flex-col min-h-0 to make the internal comment list strictly scrollable */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2 shrink-0">
               <MessageSquare size={18} /> Discussion
             </h3>
 
-            {/* Live Comment Component */}
-            <CommentSection
-              taskId={taskId}
-              workspaceMembers={workspaceMembers}
-            />
+            <div className="flex-1 min-h-0">
+              <CommentSection
+                taskId={taskId}
+                workspaceMembers={workspaceMembers}
+              />
+            </div>
           </div>
 
-          <div className="pt-8 border-t border-gray-100 space-y-6">
+          {/* MODIFIED: Added shrink-0 and mt-6 so the bottom details don't get squished by the comments */}
+          <div className="pt-6 border-t border-gray-100 space-y-6 shrink-0 mt-6">
             <div className="space-y-3">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                 <Calendar size={14} /> Set Deadline
@@ -282,6 +289,7 @@ const Task = () => {
         </div>
 
       </div>
+
     </div>
   )
 }

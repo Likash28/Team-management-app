@@ -1,16 +1,43 @@
 const nodemailer = require('nodemailer');
 
+const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'yahoo';
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
+
+if (!EMAIL_USER || !EMAIL_PASS) {
+  console.warn('Email config: EMAIL_USER or EMAIL_PASS missing. Emails will fail until set.');
+}
+
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: EMAIL_SERVICE,
   auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS  
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
   }
 });
 
-const sendMentionEmail = async (toEmail, mentionerName, taskId, taskTitle) => {
+// Verify transporter at startup to fail fast and log actionable errors
+transporter.verify((err, success) => {
+  if (err) {
+    console.error('Mail transporter verification failed:', err);
+  } else {
+    console.log(`Mail transporter is ready (service=${EMAIL_SERVICE})`);
+  }
+});
+
+const sendMentionEmail = async (toEmail, mentionerName, workspaceId, taskId, taskTitle) => {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    const err = new Error('Email credentials not configured');
+    console.error('sendMentionEmail aborted:', err.message);
+    throw err;
+  }
+
+  const clientUrl = (process.env.CLIENT_URL && process.env.CLIENT_URL !== 'undefined')
+    ? process.env.CLIENT_URL
+    : 'http://localhost:5173';
+
   const mailOptions = {
-    from: `"SyncNode Notifications" <${process.env.EMAIL_USER}>`,
+    from: `"SyncNode Notifications" <${EMAIL_USER}>`,
     to: toEmail,
     subject: `You were mentioned in SyncNode`,
     html: `
@@ -19,7 +46,7 @@ const sendMentionEmail = async (toEmail, mentionerName, taskId, taskTitle) => {
         <p>Hi,</p>
         <p><strong>${mentionerName}</strong> mentioned you in the task: <strong>${taskTitle}</strong>.</p>
         <div style="margin-top: 20px;">
-          <a href="${process.env.CLIENT_URL}/workspace/task/${taskId}" 
+          <a href="${clientUrl}/workspace/${workspaceId}/task/${taskId}"
              style="background: #00ED64; color: #001E2B; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold;">
             View Discussion
           </a>
@@ -29,10 +56,12 @@ const sendMentionEmail = async (toEmail, mentionerName, taskId, taskTitle) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Mention email sent to ${toEmail}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Mention email sent to ${toEmail} messageId=${info.messageId}`);
+    return info;
   } catch (error) {
-    console.error("Email error:", error);
+    console.error(`Email error sending to ${toEmail}:`, error);
+    throw error; 
   }
 };
 

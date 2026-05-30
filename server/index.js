@@ -7,6 +7,7 @@ const authRoutes = require('./src/routes/authRoutes')
 const workspaceRoutes = require('./src/routes/workspaceRoutes')
 const taskRoutes = require('./src/routes/taskRoutes')
 const commentRoutes = require('./src/routes/commentRoutes')
+const archiveRoutes = require('./src/routes/archivedRoutes')
 require('./src/config/passport')
 const connectDB = require('./src/config/db')
 
@@ -46,6 +47,8 @@ app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/tasks', taskRoutes)
 
 app.use('/api/comments', commentRoutes)
+
+app.use('/api/archives', archiveRoutes)
 
 const PORT = process.env.PORT || 5000
 

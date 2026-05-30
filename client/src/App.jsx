@@ -7,6 +7,7 @@ import Workspace from './pages/Workspace'
 import WorkspacesList from './pages/WorkspacesList'
 import Task from './pages/Task'
 import JoinPage from './pages/JoinPage'
+import ArchiveBinView from './pages/ArchiveBinView'
 
 const App = () => {
   const isAuthenticated = !!localStorage.getItem('token')
@@ -16,10 +17,6 @@ const App = () => {
       <Route path="/register" element={isAuthenticated ? <Navigate to="/home" /> : <Register />} />
       <Route path="/" element={isAuthenticated ? <Navigate to="/home" /> : <Login />} />
 
-      {/* MOVE THIS HERE: 
-        Putting JoinPage outside the protected layout removes the sidebar 
-        and allows for the full-screen glassmorphism effect.
-      */}
       <Route path="/join/:inviteCode" element={<JoinPage />} />
 
       <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/" />}>
@@ -27,6 +24,7 @@ const App = () => {
         <Route path="/workspace/:workspaceId" element={<Workspace />} />
         <Route path="/workspaces" element={<WorkspacesList />} />
         <Route path="/workspace/:workspaceId/task/:taskId" element={<Task />} />
+        <Route path="/archive-bin" element={<ArchiveBinView />} />
       </Route>
     </Routes>
   )

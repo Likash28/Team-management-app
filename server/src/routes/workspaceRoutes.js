@@ -1,8 +1,19 @@
 const express = require('express')
 const router = express.Router()
-const { joinWorkspace, createWorkspace, getWorkspaceMembers, getUserWorkspaces, deleteWorkSpace, updateMemberRole, updateWorkspace, searchWorkspaceMembers, getInviteInfo, updateMemberStatus } = require('../controllers/workspaceController')
 const { protect, checkRole } = require('../middleware/authMiddleware')
 const Workspace = require('../models/workspaceModel')
+const { joinWorkspace,
+    createWorkspace,
+    getWorkspaceMembers,
+    getUserWorkspaces,
+    deleteWorkSpace,
+    updateMemberRole,
+    updateWorkspace,
+    searchWorkspaceMembers,
+    getInviteInfo,
+    updateMemberStatus,
+    workspaceArchived } = require('../controllers/workspaceController')
+
 
 router.post('/', protect, createWorkspace)
 router.post('/join/:inviteCode', protect, joinWorkspace)
@@ -20,7 +31,8 @@ router.patch('/:workspaceId', protect, checkRole(['owner']), updateWorkspace)
 
 router.patch('/:workspaceId/members/:memberId/role', ensureAuth, workspaceController.updateMemberRole); */
 
-router.patch('/:workspaceId/members/:memberId/role', protect, updateMemberRole);
+router.patch('/:workspaceId/members/:memberId/role', protect, updateMemberRole)
 router.patch('/:workspaceId/members/:memberId/status', protect, updateMemberStatus)
+router.patch('/:workspaceId/archive', protect, workspaceArchived)
 
 module.exports = router

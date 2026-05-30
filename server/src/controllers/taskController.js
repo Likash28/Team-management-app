@@ -1,4 +1,6 @@
 const Task = require('../models/taskModel')
+const Member = require('../models/memberModel')
+const Archive = require('../models/archiveModel')
 
 const createTask = async (req, res) => {
     try {
@@ -11,8 +13,8 @@ const createTask = async (req, res) => {
             description,
             priority,
             dueDate,
-            primaryAssignee, 
-            secondaryAssignee, 
+            primaryAssignee,
+            secondaryAssignee,
             workspace: workspaceId,
             createdBy: req.user._id
         })
@@ -47,17 +49,17 @@ const getTaskById = async (req, res) => {
 const getWorkspaceTasks = async (req, res) => {
     try {
         const { workspaceId } = req.params;
-        
-        const { 
-            devStatus, 
-            unitTestStatus, 
-            sitStatus, 
-            uatStatus, 
-            priority, 
-            primaryAssignee 
+
+        const {
+            devStatus,
+            unitTestStatus,
+            sitStatus,
+            uatStatus,
+            priority,
+            primaryAssignee
         } = req.query;
 
-        let query = { workspace: workspaceId };
+        let query = { workspace: workspaceId, isArchived: { $ne: true } };
 
         if (devStatus) query.devStatus = devStatus;
         if (unitTestStatus) query.unitTestStatus = unitTestStatus;
@@ -70,7 +72,7 @@ const getWorkspaceTasks = async (req, res) => {
             .populate('primaryAssignee', 'name email')
             .populate('secondaryAssignee', 'name email')
             .populate('createdBy', 'name')
-            .sort({ createdAt: -1 }); 
+            .sort({ createdAt: -1 });
 
         res.status(200).json(tasks);
     } catch (error) {
@@ -116,4 +118,66 @@ const updateTask = async (req, res) => {
     }
 }
 
-module.exports = { createTask, getWorkspaceTasks, deleteTask, updateTask, getTaskById }
+const taskArchived = async (req, res) => {
+    try {
+        const { workspaceId, taskId } = req.params
+        const { action } = req.body
+
+        const targetTask = await Task.findById(taskId)
+        if (!targetTask) {
+            return res.status(404).json({ message: 'Task not found' })
+        }
+
+        const requestor = await Member.findOne({ workspace: targetTask.workspace, user: req.user._id })
+        if (!requestor || (requestor.role !== 'admin' && requestor.role !== 'owner')) {
+            return res.status(403).json({ message: "Only admins can archive a task" })
+        }
+
+        if (action === 'archive') {
+            const archived = await Task.findByIdAndUpdate(
+                taskId,
+                { isArchived: true, wasRestored: false },
+                { new: true }
+            )
+
+            if (!archived) {
+                return res.status(404).json({ message: 'Task not found' })
+            }
+
+            const existing = await Archive.findOne({ task: taskId })
+
+            if (!existing) {
+                await Archive.create({
+                    itemType: 'task',
+                    task: taskId,
+                    archivedBy: req.user._id
+                })
+            }else{
+                return res.status(500).json({message: 'Task already archived'})
+            }
+
+            return res.status(200).json({ message: 'Task archived successfully', task: archived })
+        }
+
+        if (action === 'restore') {
+            const restored = await Task.findByIdAndUpdate(
+                taskId,
+                { isArchived: false, wasRestored: true },
+                { new: true }
+            )
+
+            await Task.findByIdAndUpdate(taskId, { isArchived: false, wasRestored: true })
+            await Archive.deleteOne({ task: taskId })
+
+            return res.status(200).json({ message: 'Task restored successfully', task: restored })
+        }
+
+        return res.status(400).json({ message: "Invalid request" })
+    }
+    catch (err) {
+        console.log('Task archive error: ', err)
+        res.status(500).json({ message: err.message })
+    }
+}
+
+module.exports = { createTask, getWorkspaceTasks, deleteTask, updateTask, getTaskById, taskArchived }
